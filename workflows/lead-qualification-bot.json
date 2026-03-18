@@ -1,0 +1,138 @@
+{
+  "name": "Lead Qualification Bot",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        250,
+        300
+      ],
+      "parameters": {
+        "path": "lead-intake",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "2",
+      "name": "OpenAI - Qualify Lead",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a lead qualification expert. Score this lead 1-10 and return JSON: {score: number, reason: string, hot: boolean}"
+            },
+            {
+              "role": "user",
+              "content": "={{$json.body}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Route by Score",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        750,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.hot}}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Notify Sales (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "position": [
+        1000,
+        200
+      ],
+      "parameters": {
+        "channel": "#hot-leads",
+        "text": "Hot lead! Score: ={{$json.score}} - ={{$json.reason}}"
+      }
+    },
+    {
+      "id": "5",
+      "name": "Add to Nurture (Email)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1000,
+        400
+      ],
+      "parameters": {
+        "url": "https://api.youremailprovider.com/lists/nurture/contacts",
+        "method": "POST"
+      }
+    }
+  ],
+  "connections": {
+    "1": {
+      "main": [
+        [
+          {
+            "node": "2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2": {
+      "main": [
+        [
+          {
+            "node": "3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3": {
+      "main": [
+        [
+          {
+            "node": "4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
