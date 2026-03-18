@@ -1,0 +1,128 @@
+{
+  "name": "Invoice Processor",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Google Drive Trigger",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "position": [
+        250,
+        300
+      ],
+      "parameters": {
+        "folderId": "YOUR_FOLDER_ID",
+        "event": "fileCreated"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Download File",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{$json.id}}"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Extract Invoice (AI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        750,
+        300
+      ],
+      "parameters": {
+        "url": "https://your-ai-invoice-extractor.railway.app/extract",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "value": "={{$binary.data}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Append to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1000,
+        300
+      ],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "sheetId": "YOUR_SHEET_ID",
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        }
+      }
+    },
+    {
+      "id": "5",
+      "name": "Notify Slack",
+      "type": "n8n-nodes-base.slack",
+      "position": [
+        1250,
+        300
+      ],
+      "parameters": {
+        "channel": "#invoices",
+        "text": "New invoice processed: ={{$json.vendor}} - ={{$json.total}} ={{$json.currency}}"
+      }
+    }
+  ],
+  "connections": {
+    "1": {
+      "main": [
+        [
+          {
+            "node": "2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2": {
+      "main": [
+        [
+          {
+            "node": "3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3": {
+      "main": [
+        [
+          {
+            "node": "4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4": {
+      "main": [
+        [
+          {
+            "node": "5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
